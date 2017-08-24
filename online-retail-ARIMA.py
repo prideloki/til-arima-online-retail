@@ -24,7 +24,7 @@
 # 
 # 
 
-# In[1]:
+# In[4]:
 
 import pandas as pd
 import numpy as np
@@ -36,80 +36,86 @@ import operator
 import statsmodels.api as sm
 
 
-# In[2]:
+# In[5]:
 
 online_retail = pd.read_excel('data/Online Retail.xlsx')
 
 
-# In[3]:
+# In[6]:
 
 online_retail.describe()
 
 
-# In[4]:
-
-online_retail.head()
-
-
-# In[5]:
-
-online_retail['InvoiceDate'] = online_retail['InvoiceDate'].astype('datetime64[ns]')
-
-
-# In[6]:
-
-online_retail.head()
-
-
 # In[7]:
 
-online_retail.info()
+online_retail.head()
 
 
 # In[8]:
 
-(online_retail['CustomerID'].isnull()).any()
+online_retail['InvoiceDate'] = online_retail['InvoiceDate'].astype('datetime64[ns]')
+online_retail['TotalPrice'] = online_retail['Quantity'] * online_retail['UnitPrice']
 
 
 # In[9]:
 
-online_retail[online_retail['CustomerID'].isnull()]
+online_retail.head()
 
 
 # In[10]:
+
+online_retail.info()
+
+
+# In[11]:
+
+(online_retail['CustomerID'].isnull()).any()
+
+
+# In[12]:
+
+online_retail[online_retail['CustomerID'].isnull()]
+
+
+# In[13]:
 
 #calculate revenue? total sum of the price
 online_retail.set_index('InvoiceDate', inplace=True)
 
 
-# In[11]:
+# In[14]:
 
 # http://pandas.pydata.org/pandas-docs/stable/timeseries.html#offset-aliases
-y = online_retail['Quantity'].resample('MS').sum()
-
-
-# In[12]:
-
-y = y.fillna(y.bfill())
-
-
-# In[13]:
-
-y.head()
+y = online_retail['TotalPrice'].resample('D').sum()
 
 
 # In[15]:
 
-y.isnull().any()
+y.head()
 
 
 # In[16]:
+
+y = y.fillna(y.bfill())
+
+
+# In[17]:
+
+y.head()
+
+
+# In[18]:
+
+y.isnull().any()
+
+
+# In[19]:
 
 y.plot(figsize=(15,6))
 plt.show()
 
 
-# In[17]:
+# In[20]:
 
 p = d = q = range(0, 2)
 
@@ -120,14 +126,14 @@ s = 1
 seasonal_pdq = [(x[0], x[1], x[2], s) for x in list(itertools.product(p, d, q))]
 
 
-# In[18]:
+# In[21]:
 
 print('Example of parameter conbination for Seasonal ARIMA')
 print('SARIMAX: {} x {}'.format(pdq[1], seasonal_pdq[1]))
 print('SARIMAX: {} x {}'.format(pdq[2], seasonal_pdq[2]))
 
 
-# In[19]:
+# In[22]:
 
 warnings.filterwarnings('ignore')
 history = {}
@@ -149,23 +155,23 @@ for param in pdq:
 
 # Get the combination that results the minimum AIC
 
-# In[20]:
+# In[23]:
 
 sorted_x = sorted(history.items(), key=operator.itemgetter(1))
 
 
-# In[21]:
+# In[24]:
 
 param, param_seasonal =  sorted_x[0][0][0], sorted_x[0][0][1]
 
 
-# In[22]:
+# In[25]:
 
 print(param)
 print(param_seasonal)
 
 
-# In[23]:
+# In[26]:
 
 model = sm.tsa.statespace.SARIMAX(y,
                          order = param,
@@ -176,12 +182,12 @@ model = sm.tsa.statespace.SARIMAX(y,
 results = model.fit()
 
 
-# In[24]:
+# In[27]:
 
 print(results.summary())
 
 
-# In[25]:
+# In[28]:
 
 # http://www.statsmodels.org/dev/generated/statsmodels.tsa.statespace.sarimax.SARIMAXResults.plot_diagnostics.html
 results.plot_diagnostics(lags=1, figsize=(15,6))
@@ -195,18 +201,18 @@ plt.show()
 
 # ### One-step ahead forecast
 
-# In[26]:
+# In[29]:
 
 start_date = '2011-10-01'
 pred = results.get_prediction(start=pd.to_datetime(start_date), dynamic=False)
 
 
-# In[27]:
+# In[30]:
 
 pred_ci = pred.conf_int()
 
 
-# In[28]:
+# In[31]:
 
 ax = y['2011':].plot(label='observed')
 
@@ -218,14 +224,14 @@ ax.fill_between(pred_ci.index,
                alpha=.2)
 
 ax.set_xlabel('Date')
-ax.set_ylabel('Total Unit Sales')
+ax.set_ylabel('Sum of Total Price')
 
 plt.legend()
 
 plt.show()
 
 
-# In[29]:
+# In[32]:
 
 y_forecasted = pred.predicted_mean
 y_truth = y[start_date:]
@@ -237,14 +243,14 @@ print('The Mean Squared Error of our forecasts is {}'.format(round(mse,2)))
 
 # ### Dynamic forecast
 
-# In[30]:
+# In[33]:
 
 pred_dynamic = results.get_prediction(start=pd.to_datetime(start_date), dynamic=True)
 
 pred_dynamic_ci = pred_dynamic.conf_int()
 
 
-# In[31]:
+# In[34]:
 
 ax = y['2011':].plot(label='observed')
 
@@ -258,14 +264,14 @@ ax.fill_between(pred_dynamic_ci.index,
 ax.fill_betweenx(ax.get_ylim(), pd.to_datetime(start_date), y.index[-1], alpha=.1, zorder=-1)
 
 ax.set_xlabel('Date')
-ax.set_ylabel('Total Unit Sales')
+ax.set_ylabel('Sum of Total Price')
 
 plt.legend()
 
 plt.show()
 
 
-# In[32]:
+# In[35]:
 
 y_forecasted = pred_dynamic.predicted_mean
 y_truth = y[start_date:]
@@ -274,18 +280,18 @@ mse = ((y_forecasted - y_truth) ** 2).mean()
 print('The Mean Squared Error of our forecasts is {}'.format(round(mse, 2)))
 
 
-# The dynamic forecast results lower MSE than the one-step ahead
+# The one-step ahead results lower MSE than the dynamic.
 
 # ## Visualizing Forecasts
 
-# In[35]:
+# In[36]:
 
-pred_uc = results.get_forecast(steps=2)
+pred_uc = results.get_forecast(steps=7)
 
 pred_ci = pred_uc.conf_int()
 
 
-# In[36]:
+# In[37]:
 
 ax = y.plot(label='observed', figsize=(20,15))
 
@@ -297,7 +303,7 @@ ax.fill_between(pred_ci.index,
                alpha=.25)
 
 ax.set_xlabel('Date')
-ax.set_ylabel('Total Unit Sales')
+ax.set_ylabel('Sum of Total Price')
 
 plt.legend()
 plt.show()
